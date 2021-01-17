@@ -2,6 +2,8 @@ from django.contrib.auth.models import User
 from django.db import models
 from django.urls import reverse
 from django.utils import timezone
+import markdown
+from django.utils.html import strip_tags
 
 
 class Category(models.Model):
@@ -38,7 +40,8 @@ class Tag(models.Model):
 
 
 class Post(models.Model):
-
+    body = models.TextField()
+    excerpt = models.CharField(max_length=200, blank=True)
     title = models.CharField('标题', max_length=70)
     body = models.TextField('正文')
     created_time = models.DateTimeField('创建时间')
@@ -49,18 +52,29 @@ class Post(models.Model):
     author = models.ForeignKey(User, verbose_name='作者', on_delete=models.CASCADE)
     author = models.ForeignKey(User, on_delete=models.CASCADE)
     created_time = models.DateTimeField('创建时间', default=timezone.now)
-    class Meta:
-        verbose_name = '文章'
-        verbose_name_plural = verbose_name
 
-    def __str__(self):
-        return self.name
     def save(self, *args, **kwargs):
         self.modified_time = timezone.now()
+
+        # 首先实例化一个 Markdown 类，用于渲染 body 的文本。
+        # 由于摘要并不需要生成文章目录，所以去掉了目录拓展。
+        md = markdown.Markdown(extensions=[
+            'markdown.extensions.extra',
+            'markdown.extensions.codehilite',
+        ])
+
+        # 先将 Markdown 文本渲染成 HTML 文本
+        # strip_tags 去掉 HTML 文本的全部 HTML 标签
+        # 从文本摘取前 54 个字符赋给 excerpt
+        self.excerpt = strip_tags(md.convert(self.body))[:54]
+
         super().save(*args, **kwargs)
 
     # 自定义 get_absolute_url 方法
     # 记得从 django.urls 中导入 reverse 函数
     def get_absolute_url(self):
         return reverse('blog:detail', kwargs={'pk': self.pk})
+    class Meta:
+        verbose_name = '文章'
+        verbose_name_plural = verbose_name
 
