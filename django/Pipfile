@@ -6,6 +6,9 @@ name = "pypi"
 [packages]
 django = "==2.2.3"
 markdown = "*"
+matplotlib = "*"
+pygal = "*"
+requests = "*"
 
 [dev-packages]
 
